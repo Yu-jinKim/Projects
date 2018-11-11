@@ -8,9 +8,13 @@ public:
     ZFraction(int numerator);
     ZFraction(int numerator, int denominator);
     ZFraction(ZFraction const& autre);
+
     int getNum();
     int getDenom();
-    void display() const;
+    void display(std::ostream &flux) const;
+    bool isEgal(ZFraction const& b) const;
+    bool isSmallerThan(ZFraction const& b) const;
+
     ZFraction& operator+=(ZFraction const& a);
     ZFraction& operator*=(ZFraction const& a);
 

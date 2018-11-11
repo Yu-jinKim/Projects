@@ -23,11 +23,6 @@ ZFraction::ZFraction(ZFraction const& autre) : m_numerator(autre.m_numerator), m
 
 }
 
-void ZFraction::display() const
-{
-    cout << m_numerator << "/" << m_denominator;
-}
-
 int ZFraction::getNum()
 {
     return m_numerator;
@@ -36,6 +31,27 @@ int ZFraction::getNum()
 int ZFraction::getDenom()
 {
     return m_denominator;
+}
+
+void ZFraction::display(ostream &flux) const
+{
+    flux << m_numerator << "/" << m_denominator;
+}
+
+bool ZFraction::isEgal(ZFraction const& b) const
+{
+    return (m_numerator == b.m_numerator && m_denominator == b.m_denominator);
+}
+
+bool ZFraction::isSmallerThan(ZFraction const& b) const
+{
+    int comp_num1 = m_numerator*b.m_denominator;
+    int comp_num2 = b.m_numerator*m_denominator;
+
+    if (comp_num1 < comp_num2)
+        return true;
+    else
+        return false;
 }
 
 ZFraction& ZFraction::operator+=(const ZFraction& a)
@@ -60,6 +76,12 @@ ZFraction& ZFraction::operator*=(const ZFraction& a)
     return *this;
 }
 
+ostream& operator<<(ostream &flux, ZFraction const& fraction)
+{
+    fraction.display(flux);
+    return flux;
+}
+
 ZFraction operator+(ZFraction const& a, ZFraction const& b)
 {
     ZFraction copie(a);
@@ -72,6 +94,16 @@ ZFraction operator*(ZFraction const& a, ZFraction const& b)
     ZFraction copie(a);
     copie *= b;
     return copie;
+}
+
+bool operator==(ZFraction const& a, ZFraction const& b)
+{
+    return a.isEgal(b);
+}
+
+bool operator<(ZFraction const& a, ZFraction const& b)
+{
+    return a.isSmallerThan(b);
 }
 
 int pgcd(int a, int b)
