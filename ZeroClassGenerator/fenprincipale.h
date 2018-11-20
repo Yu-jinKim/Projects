@@ -7,7 +7,8 @@
 #include <QDateEdit>
 #include <QPushButton>
 #include <QLineEdit>
-#include <QHBoxLayout>
+#include <QGridLayout>
+#include <QTextEdit>
 
 #ifndef FENPRINCIPALE_H
 #define FENPRINCIPALE_H
@@ -30,7 +31,7 @@ private:
     QVBoxLayout *m_VOptions;
     QVBoxLayout *m_VComm;
 
-    QHBoxLayout *m_HButtons;
+    QGridLayout *m_gridButtons;
 
     QGroupBox *m_groupDef;
     QGroupBox *m_groupOptions;
@@ -46,7 +47,8 @@ private:
     QLineEdit *m_nom;
     QLineEdit *m_classMere;
     QLineEdit *m_auteur;
-    QLineEdit *m_comm;
+
+    QTextEdit *m_comm;
 
     QDateEdit *m_date;
 

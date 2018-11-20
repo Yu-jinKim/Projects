@@ -2,27 +2,28 @@
 
 FenPrincipale::FenPrincipale() : QWidget()
 {
-    setFixedSize(450,600);
-
     // Principal layout
     m_principalLayout = new QVBoxLayout(this);
     createDefClassBox();
     createOptionsBox();
     createCommBox();
 
-    m_generate = new QPushButton("Générer!");
-    m_quit = new QPushButton("Quitter");
+    m_generate = new QPushButton("Générer!", this);
+    m_quit = new QPushButton("Quitter", this);
 
-    m_HButtons = new QHBoxLayout;
-    m_HButtons->addWidget(m_generate);
-    m_HButtons->addWidget(m_quit);
+    m_gridButtons = new QGridLayout;
+    m_gridButtons->setColumnStretch(0, 1);
+    m_gridButtons->addWidget(m_generate, 0, 2);
+    m_gridButtons->addWidget(m_quit, 0, 3);
 
     m_principalLayout->addWidget(m_groupDef);
     m_principalLayout->addWidget(m_groupOptions);
     m_principalLayout->addWidget(m_groupComm);
-    m_principalLayout->addLayout(m_HButtons);
+    m_principalLayout->addLayout(m_gridButtons);
 
     setLayout(m_principalLayout);
+
+//    QObject::connect(m_quit, SIGNAL(clicked()), app, SLOT(quit()));
 }
 
 void FenPrincipale::createDefClassBox()
@@ -30,14 +31,15 @@ void FenPrincipale::createDefClassBox()
     m_groupDef = new QGroupBox;
     m_VDef = new QVBoxLayout;
 
-    m_formDef = new QFormLayout;
-
     m_nom = new QLineEdit;
     m_classMere = new QLineEdit;
+
+    m_formDef = new QFormLayout;
 
     m_formDef->addRow("&Nom :", m_nom);
     m_formDef->addRow("Classe &mère :", m_classMere);
 
+    m_VDef->addLayout(m_formDef);
     m_groupDef->setTitle("Définition de la classe");
     m_groupDef->setLayout(m_VDef);
 }
@@ -64,17 +66,20 @@ void FenPrincipale::createCommBox()
     m_groupComm = new QGroupBox;
     m_VComm = new QVBoxLayout;
 
-    m_formComm = new QFormLayout;
-
     m_auteur = new QLineEdit;
-    m_date = new QDateEdit;
-    m_comm = new QLineEdit;
+    m_date = new QDateEdit(QDate::currentDate());
+    m_comm = new QTextEdit;
+    m_comm->setMinimumHeight(200);
+
+    m_formComm = new QFormLayout;
 
     m_formComm->addRow("&Auteur :", m_auteur);
     m_formComm->addRow("Da&te de création :", m_date);
     m_formComm->addRow("&Rôle de la classe :", m_comm);
 
-    m_groupComm->setCheckable(false);
+    m_VComm->addLayout(m_formComm);
+
+    m_groupComm->setCheckable(true);
     m_groupComm->setTitle("Ajouter des commentaires");
     m_groupComm->setLayout(m_VComm);
 }
