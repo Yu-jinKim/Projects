@@ -18,9 +18,12 @@ class FenPrincipale : public QWidget
 
 public:
     FenPrincipale();
-    QGroupBox createFirstGroupBox();
 
 private:
+    void createDefClassBox();
+    void createOptionsBox();
+    void createCommBox();
+
     QVBoxLayout *m_principalLayout;
     QVBoxLayout *m_VDef;
     QVBoxLayout *m_VOptions;

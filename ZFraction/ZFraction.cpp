@@ -62,7 +62,7 @@ ZFraction& ZFraction::operator+=(const ZFraction& a)
     m_numerator/=div;
     m_denominator/=div;
 
-    return *this;
+    return *this; // this == pointeur vers l'objet, *this == l'objet
 }
 
 ZFraction& ZFraction::operator*=(const ZFraction& a)
