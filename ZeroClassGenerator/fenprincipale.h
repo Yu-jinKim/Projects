@@ -9,6 +9,9 @@
 #include <QLineEdit>
 #include <QGridLayout>
 #include <QTextEdit>
+#include <QLabel>
+#include <QMessageBox>
+#include <QString>
 
 #ifndef FENPRINCIPALE_H
 #define FENPRINCIPALE_H
@@ -21,7 +24,10 @@ class FenPrincipale : public QWidget
 public:
     FenPrincipale();
 
-private:
+public slots:
+    void generateClass();
+
+protected:
     void createDefClassBox();
     void createOptionsBox();
     void createCommBox();
@@ -44,16 +50,16 @@ private:
     QCheckBox *m_checkCons;
     QCheckBox *m_checkDestruc;
 
-    QLineEdit *m_nom;
-    QLineEdit *m_classMere;
-    QLineEdit *m_auteur;
+    QLineEdit *m_lineNom;
+    QLineEdit *m_lineClassMere;
+    QLineEdit *m_lineAuteur;
 
-    QTextEdit *m_comm;
+    QTextEdit *m_textComm;
 
     QDateEdit *m_date;
 
-    QPushButton *m_generate;
-    QPushButton *m_quit;
+    QPushButton *m_buttonGenerate;
+    QPushButton *m_buttonQuit;
 };
 
 #endif // FENPRINCIPALE_H
