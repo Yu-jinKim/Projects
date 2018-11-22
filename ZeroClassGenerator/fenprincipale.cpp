@@ -92,6 +92,8 @@ void FenPrincipale::createCommBox()
 void FenPrincipale::generateClass()
 {
     // get data from the comm section
+    bool comm(m_groupComm->isChecked());
+
     QString auteur(m_lineAuteur->text());
     QDate time(m_date->date());
     QString date(time.toString());
@@ -111,41 +113,58 @@ void FenPrincipale::generateClass()
     // Write the class
     QString classe;
 
-    classe.append("/*<br>Auteur : "+auteur+"<br>Date de création : "+date+
-                  "<br><br>Rôle :<br>");
-
-    for(int i(0);i < lines.size(); i++)
+    if(!(nom.isEmpty()))
     {
-        classe.append(lines[i]+"<br>");
+        if(comm == true)
+        {
+            classe.append("/*<br>Auteur : "+auteur+"<br>Date de création : "+date+
+                          "<br><br>Rôle :<br>");
+
+            for(int i(0);i < lines.size(); i++)
+            {
+                classe.append(lines[i]+"<br>");
+            }
+            classe.append("*/<br><br>");
+        }
+
+        if(header == true)
+        {
+            classe.append("#ifndef "+upperedNom+"_H<br>");
+            classe.append("#define "+upperedNom+"_H<br><br><br>");
+        }
+
+        classe.append("class "+nom+" : ");
+
+        if(!(classeMere.isEmpty()))
+        {
+            classe.append("public "+classeMere);
+        }
+        classe.append("<br>{<br>&nbsp;&nbsp;public:<br>");
+
+        if(constructor == true)
+        {
+            classe.append("&nbsp;&nbsp;&nbsp;&nbsp;"+nom+"();<br>");
+        }
+
+        if(destructor == true)
+        {
+            classe.append("&nbsp;&nbsp;&nbsp;&nbsp;~"+nom+"();<br>");
+        }
+
+        classe.append("<br><br>&nbsp;&nbsp;protected:<br><br><br>");
+        classe.append("&nbsp;&nbsp;private:<br><br><br>};");
+
+        if(header == true)
+        {
+            classe.append("<br><br>#endif");
+        }
+
+        // Call the window
+        FenCodeGenere generatedClass(classe);
+    }
+    else
+    {
+        QMessageBox::critical(this, "Erreur", "Vous n'avez pas entré de nom pour votre classe");
     }
 
-    if(header == true)
-    {
-        classe.append("*/<br><br>#ifndef "+upperedNom+"_H<br>");
-        classe.append("#define "+upperedNom+"_H<br><br><br>");
-    }
-
-    classe.append("class "+nom+" : public "+classeMere+"<br>{<br>");
-    classe.append("<tab>public:<br>");
-
-    if(constructor == true)
-    {
-        classe.append("<tab><tab>"+nom+"();");
-    }
-
-    if(destructor == true)
-    {
-        classe.append("<tab><tab>~"+nom+"();");
-    }
-
-    classe.append("<br><br><br><tab>protected:<br><br><br>");
-    classe.append("<tab>private:<br><br><br>};");
-
-    if(header == true)
-    {
-        classe.append("<br><br>#endif");
-    }
-
-    // Call the window
-    FenCodeGenere generatedClass(classe);
 }

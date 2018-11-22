@@ -3,6 +3,7 @@
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QString>
+#include <QSize>
 
 #ifndef FENCODEGENERE_H
 #define FENCODEGENERE_H
@@ -14,8 +15,6 @@ public:
     FenCodeGenere(QString classe);
 
 private:
-    void writeClass();
-
     QString m_classe;
 
     QTextEdit *m_textClass;
