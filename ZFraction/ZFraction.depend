@@ -1,0 +1,10 @@
+# depslib dependency file v1.0
+1541880309 source:c:\users\yujin\documents\github\projects\zfraction\main.cpp
+	<iostream>
+	"ZFraction.cpp"
+
+1541880372 c:\users\yujin\documents\github\projects\zfraction\zfraction.cpp
+	"ZFraction.h"
+
+1541880382 c:\users\yujin\documents\github\projects\zfraction\zfraction.h
+
