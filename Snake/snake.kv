@@ -6,11 +6,11 @@
 
     Snake:
         id: Jake
-        center: self.parent.center
+        pos: self.set_pos(root.width, root.height)
 
     Food:
         id: appl
-        pos: self.parent.food_random_pos()
+        pos: self.random_pos(root.width, root.height)
 
 
 <Snake>
