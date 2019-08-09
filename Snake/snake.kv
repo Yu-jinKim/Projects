@@ -1,0 +1,29 @@
+#:kivy 1.11.1
+
+<SnakeGame>
+    snake: Jake
+    food: appl
+
+    Snake:
+        id: Jake
+        center: self.parent.center
+
+    Food:
+        id: appl
+        pos: self.parent.food_random_pos()
+
+
+<Snake>
+    size: 40, 40
+    canvas:
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+
+<Food>
+    size: 40, 40
+    canvas:
+        Ellipse:
+            pos: self.pos
+            size: self.size
