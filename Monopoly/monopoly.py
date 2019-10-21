@@ -4,6 +4,8 @@ Implementation of Monopoly game kinda
 """
 
 from random import randint
+import sys
+from collections import defaultdict
 
 PROPERTIES = {
     1: {"Old Kent Road": {"Rent": 2, "Price": 60}},
@@ -64,35 +66,39 @@ class Player:
         return self.name
 
     def get_status(self):
-        return f"{self.name}:\n- Moneyz: {self.balance}\n- Position on the board: {self.position}\n- Possessions: {self.possessions}"
+        return (f"{self.name}:\n"
+                f"- Moneyz: {self.balance}\n"
+                f"- Position on the board: {self.position}\n"
+                f"- Possessions: {self.possessions}")
 
     def get_balance(self):
         return self.balance
 
     def move(self, dice_amount):
         self.position += dice_amount
-        
+
         if self.position >= 40:
             self.position -= 40
 
-        print(f"You rolled: {dice_amount}")
-        print(f"You are now at the position {self.position}")
         return self.position
+
+    def get_possessions(self):
+        return self.possessions
+
+    def get_jail_status(self):
+        return self.in_jail
 
     def add_possession(self, land, amount):
         self.balance -= amount
         self.possessions.append(land)
         print(f"You paid {amount} for {land}")
-        print(f"you now have these properties: {self.possessions}")
+        print(f"you now have these properties: {self.get_possessions()}")
 
     def remove_possession(self, land, amount):
         self.balance += amount
         self.possessions.remove(land)
-        print(f"You removed {amount} for {land}")
+        print(f"You removed {land} for {amount}")
         print(f"you now have these properties: {self.possessions}")
-
-    def get_possessions(self):
-        return self.possessions
 
     def pay(self, amount):
         self.balance -= amount
@@ -102,11 +108,8 @@ class Player:
         self.balance += amount
         return self.balance
 
-    def go_to_jail(self, going):
-        self.in_jail = going
-
-    def in_jail(self):
-        return self.in_jail
+    def go_to_jail(self):
+        self.in_jail = True
 
 
 def check_if_owned(players: list, land):
@@ -131,38 +134,91 @@ def check_position(players, player, position):
             print(f"You owe {owner} {rent}")
             player_balance = player.pay(rent)
             owner_balance = owner.receive(rent)
-            print(f"{player} has now {player_balance} and {owner} has now {owner_balance}")
+            print((f"{player} has now {player_balance} "
+                   f"and {owner} has now {owner_balance}"))
         else:
             buy = input("Buy? (y/n) ")
 
             if buy:
                 player_balance = player.get_balance()
+
                 if player_balance >= price:
                     player.add_possession(land, price)
-                    print(f"You now own {land}")
                 else:
-                    print(f"You don't have enough money for {land}: {player_balance} <= {price}")
-                
+                    print(("You don't have enough money for"
+                           f"{land}: {player_balance} <= {price}"))
+
     elif position in SPECIAL_CASES:
-        if SPECIAL_CASES[position] == "Go to jail":
+        case = list(PROPERTIES[position].keys())[0]
+        print(f"You landed on {case}")
+
+        if case == "Go to jail":
             player.go_to_jail()
-        elif SPECIAL_CASES[position] == "Free Parking":
+        elif case == "Free Parking":
             player.receive(FREE_PARKING)
             FREE_PARKING = 0
-        elif SPECIAL_CASES[position] == "Start":
-            player.receive(SPECIAL_CASES[position]["Start"])
-        elif SPECIAL_CASES[position] == "Income Tax":
-            pay_taxes(player, SPECIAL_CASES[position]["Income Tax"])
-        elif SPECIAL_CASES[position] == "Super Tax":
-            pay_taxes(player, SPECIAL_CASES[position]["Super Tax"])
+        elif case == "Start":
+            player.receive(case["Start"])
+        elif case == "Income Tax":
+            pay_taxes(player, case["Income Tax"])
+        elif case == "Super Tax":
+            pay_taxes(player, case["Super Tax"])
 
     elif position in CHANCES:
-        pass
+        print("You landed on a Chance")
 
     elif position in COMMUNITY_CHESTS:
-        pass
+        print("You landed on a Community Chest")
 
-    print("Next turn\n")
+
+def check_if_bankrupt(player):
+    if player.get_balance() <= 0:
+        possible_mortgages = {}
+        player_possessions = player.get_possessions()
+
+        for land in player_possessions:
+            land_values = PROPERTIES.values()
+
+            for land_value in land_values:
+                if land in land_value:
+                    possible_mortgages[land] = land_value[land]["Price"] / 2
+
+        if player.get_balance() + sum(possible_mortgages.values()) < 0:
+            print("You're bankrupt")
+            return True
+
+        print(f"You're possibly bankrupt: {player.get_balance()}")
+        print("Here are your possible mortgages:")
+
+        for mortgage in possible_mortgages:
+            print(f" - {mortgage}: {possible_mortgages[mortgage]}")
+
+        mortgage = input("Do you want to mortgage your house? (Y/N) ").upper()
+
+        if mortgage == "Y":
+            while player.get_balance() <= 0:
+                mortgaged_property = input(
+                    "Which property do you want to mortgage? "
+                ).capitalize()
+
+                if mortgaged_property in possible_mortgages:
+                    player.remove_possession(
+                        mortgaged_property,
+                        possible_mortgages[mortgaged_property]
+                    )
+
+            return False
+
+        else:
+            print("You decided to be bankrupt")
+            return True
+
+    else:
+        return False
+
+
+def roll():
+    return randint(1, 6) + randint(1, 6)
 
 
 def pay_taxes(player, amount):
@@ -180,21 +236,46 @@ def main():
         print(f"Something wrong in the nb of players: {e}")
         return -1
 
+    if nb_players > 6:
+        print("Too many players")
+        sys.exit()
+
     for i in range(nb_players):
         name = input(f"Name of player {i+1} ? ")
         names_of_players.append(name)
 
     players = [Player(name) for name in names_of_players]
+    rolls = []
+
+    for player in players:
+        rolls.append(roll())
+
+    rolls_players = sorted(set(zip(rolls, players)), key=lambda x: -x[0])
+    ordered_players = [player[1] for player in rolls_players]
 
     print("\nGame is starting")
 
     while True:
-        for player in players:
+        for player in ordered_players:
             print(f"Turn of {player.get_status()}")
             input("Press enter to roll...")
-            dice_amount = randint(1, 6) + randint(1, 6)
+            dice_amount = roll()
             new_position = player.move(dice_amount)
             check_position(players, player, new_position)
+            print("Next turn\n")
+
+        for player in ordered_players:
+            bankrupt = check_if_bankrupt(player)
+
+            if bankrupt:
+                ordered_players.remove(player)
+
+        if len(ordered_players) == 1:
+            print(f"{ordered_players[0]} is the winner !")
+            break
+        elif len(ordered_players) == 0:
+            print("Savages")
+            break
 
 
 if __name__ == "__main__":
