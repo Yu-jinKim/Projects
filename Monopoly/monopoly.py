@@ -56,11 +56,12 @@ FREE_PARKING = 0
 
 class Player:
     def __init__(self, name):
+        """ Setup the player """
         self.name = name
         self.balance = 1500
         self.position = 0
         self.possessions = []
-        self.in_jail = False
+        self.in_jail = 0
 
     def __str__(self):
         return self.name
@@ -69,12 +70,14 @@ class Player:
         return (f"{self.name}:\n"
                 f"- Moneyz: {self.balance}\n"
                 f"- Position on the board: {self.position}\n"
-                f"- Possessions: {self.possessions}")
+                f"- Possessions: {self.possessions}"
+                f"- In jail?: {self.in_jail}")
 
     def get_balance(self):
         return self.balance
 
     def move(self, dice_amount):
+        """ Move the player (take into account the board is a circle)"""
         self.position += dice_amount
 
         if self.position >= 40:
@@ -109,10 +112,26 @@ class Player:
         return self.balance
 
     def go_to_jail(self):
-        self.in_jail = True
+        self.in_jail = 3
+        self.position = 10
+
+    def out_of_jail(self):
+        self.in_jail = 0
+
+    def turn_passing(self):
+        self.in_jail -= 1
 
 
 def check_if_owned(players: list, land):
+    """ check if the land is owned
+    Args:
+    - list of players
+    - land
+    Returns:
+    - bool (is land owned)
+    - owner (player)
+    """
+
     for player in players:
         owned_lands = player.get_possessions()
 
@@ -123,6 +142,16 @@ def check_if_owned(players: list, land):
 
 
 def check_position(players, player, position):
+    """ check the position of the player
+
+    Do the right thing according to the tile the player landed on
+
+    Args:
+    - list of players
+    - current player
+    - position
+    """
+
     if position in PROPERTIES:
         land = list(PROPERTIES[position].keys())[0]
         price = PROPERTIES[position][land]["Price"]
@@ -172,6 +201,16 @@ def check_position(players, player, position):
 
 
 def check_if_bankrupt(player):
+    """ check if the player goes bankrupt
+
+    Check the player's possession to see if i can not go bankrupt
+
+    Args:
+    - player
+    Returns:
+    - bool
+    """
+
     if player.get_balance() <= 0:
         possible_mortgages = {}
         player_possessions = player.get_possessions()
@@ -218,15 +257,21 @@ def check_if_bankrupt(player):
 
 
 def roll():
-    return randint(1, 6) + randint(1, 6)
+    """ roll 2 dice """
+    die1 = randint(1, 6)
+    die2 = randint(1, 6)
+    print(f"You rolled {die1} and {die2}")
+    return (die1, die2)
 
 
 def pay_taxes(player, amount):
+    """ special cases for taxes tiles """
     player.pay(amount)
     FREE_PARKING += amount
 
 
 def main():
+    """ play the game """
     nb_players = input("How many players? ")
     names_of_players = []
 
@@ -257,12 +302,41 @@ def main():
 
     while True:
         for player in ordered_players:
-            print(f"Turn of {player.get_status()}")
-            input("Press enter to roll...")
-            dice_amount = roll()
-            new_position = player.move(dice_amount)
-            check_position(players, player, new_position)
-            print("Next turn\n")
+            doubles = 0
+
+            while True:
+                print(f"Turn of {player.get_status()}")
+                input("Press enter to roll...")
+                die1, die2 = roll()
+
+                if player.get_jail_status() != 0:
+                    print(f"{player} is in prison: "
+                          f"{player.get_jail_status()} turn(s) left")
+
+                    if die1 == die2:
+                        player.out_of_jail()
+                        print("You are free")
+                    else:
+                        player.turn_passing()
+                        print("Tough luck")
+
+                    break
+
+                else:
+                    if die1 == die2:
+                        doubles += 1
+
+                        if doubles == 3:
+                            player.go_to_jail()
+                            break
+
+                    dice_amount = sum(die1, die2)
+                    new_position = player.move(dice_amount)
+                    check_position(players, player, new_position)
+                    print("Next turn\n")
+
+                    if doubles == 0:
+                        break
 
         for player in ordered_players:
             bankrupt = check_if_bankrupt(player)
