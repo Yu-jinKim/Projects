@@ -5,7 +5,6 @@ Implementation of Monopoly game kinda
 
 from random import randint
 import sys
-from collections import defaultdict
 
 PROPERTIES = {
     1: {"Old Kent Road": {"Rent": 2, "Price": 60}},
@@ -82,6 +81,15 @@ class Player:
 
         if self.position >= 40:
             self.position -= 40
+
+            if self.position == 0:
+                self.balance += 400
+                print("You landed on the Go tile, lucky: "
+                      f"{self.balance - 400} --> {self.balance}")
+            else:
+                self.balance += 200
+                print("You passed through the Go tile "
+                      f"{self.balance - 200} --> {self.balance}")
 
         return self.position
 
@@ -174,7 +182,7 @@ def check_position(players, player, position):
                 if player_balance >= price:
                     player.add_possession(land, price)
                 else:
-                    print(("You don't have enough money for"
+                    print(("You don't have enough money for "
                            f"{land}: {player_balance} <= {price}"))
 
     elif position in SPECIAL_CASES:
@@ -260,7 +268,7 @@ def roll():
     """ roll 2 dice """
     die1 = randint(1, 6)
     die2 = randint(1, 6)
-    print(f"You rolled {die1} and {die2}")
+    # print(f"You rolled {die1} and {die2}")
     return (die1, die2)
 
 
