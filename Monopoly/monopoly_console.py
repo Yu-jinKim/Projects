@@ -253,11 +253,13 @@ def check_if_bankrupt(player):
                         mortgaged_property,
                         possible_mortgages[mortgaged_property]
                     )
+                else:
+                    print(f"You typed wrong {mortgaged_property} is not one of the possibilities")              
 
             return False
 
         else:
-            print("You decided to be bankrupt")
+            print("You decided to go bankrupt")
             return True
 
     else:
@@ -276,6 +278,16 @@ def pay_taxes(player, amount):
     """ special cases for taxes tiles """
     player.pay(amount)
     FREE_PARKING += amount
+
+
+def order_players(players):
+    rolls = []
+
+    for player in players:
+        rolls.append(roll())
+
+    rolls_players = sorted(set(zip(rolls, players)), key=lambda x: -x[0])
+    return [player[1] for player in rolls_players]
 
 
 def main():
@@ -298,13 +310,8 @@ def main():
         names_of_players.append(name)
 
     players = [Player(name) for name in names_of_players]
-    rolls = []
 
-    for player in players:
-        rolls.append(roll())
-
-    rolls_players = sorted(set(zip(rolls, players)), key=lambda x: -x[0])
-    ordered_players = [player[1] for player in rolls_players]
+    ordered_players = order_players(players)
 
     print("\nGame is starting")
 
