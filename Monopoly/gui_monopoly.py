@@ -5,8 +5,9 @@ from PyQt5.QtWidgets import (QLineEdit, QWidget, QApplication, QLabel,
                              QMessageBox, QErrorMessage, QGraphicsScene,
                              QGraphicsItem, QGraphicsView, QGraphicsGridLayout,
                              QGraphicsWidget, QGraphicsLinearLayout,
-                             QGraphicsTextItem, QGraphicsRectItem)
-from PyQt5.QtCore import Qt, QRectF
+                             QGraphicsTextItem, QGraphicsRectItem, QGraphicsEllipseItem,
+                             QGraphicsLayoutItem)
+from PyQt5.QtCore import Qt
 from PyQt5 import QtGui
 import monopoly_console as mp_console
 
@@ -34,22 +35,6 @@ import monopoly_console as mp_console
 #    "Leicester Square", "Coventry Street", "Water Works", "Piccadilly", "Go to Jail",
 #    "Regent Street", "Oxford Street", "Community Chest", "Bond Street", "Liverpool Street station",
 #    "Chance", "Park Lane", "Super Tax", "Mayfair"
-# ]
-
-# self.board = [
-#    "Free Parking", "Strand", "Fleet Street", "Chance", "Trafalgar Square",
-#    "Fenchurch Street station", "Leicester Square", "Coventry Street", "Water Works", "Piccadilly", "Go to Jail",
-#    "Vine Street", "", "", "", "", "", "", "", "", "", "Regent Street",
-#    "Marlborough Street", "", "", "", "", "", "", "", "", "", "Oxford Street",
-#    "Community Chest", "", "", "", "", "", "", "", "", "", "Community Chest",
-#    "Bow Street", "", "", "", "", "", "", "", "", "", "Bond Street",
-#    "Marylebine station", "", "", "", "", "", "", "", "", "", "Liverpool Street station",
-#    "Northumberland Avenue", "", "", "", "", "", "", "", "", "", "Chance",
-#    "Whitehall", "", "", "", "", "", "", "", "", "", "Park Lane",
-#    "Electric Company", "", "", "", "", "", "", "", "", "", "Super Tax",
-#    "Pall Mall", "", "", "", "", "", "", "", "", "", "Mayfair",
-#    "Visit Jail", "Pentonville Road", "Euston Road", "Chance", "The Angel Islington", "King's Cross station",
-#    "Income Tax", "Whitechapel Road", "Community Chest", "Old Kent Road", "Start"
 # ]
 
 
@@ -278,7 +263,7 @@ class Board(QGraphicsWidget):
          if name == "":
             continue
          
-         self.board_layout.addItem(Tile(name, nb_players, parent = self), *position)
+         self.board_layout.addItem(Tile(name, players, parent = self), *position)
 
       self.setLayout(self.board_layout)
 
@@ -288,15 +273,20 @@ class Board(QGraphicsWidget):
 
 
 class Tile(QGraphicsWidget):
-   def __init__(self, name, nb_players, parent):
+   def __init__(self, name, players, parent):
       super().__init__(parent = parent)
       self.name = name
       self.tokens = []
 
       self.layout = QGraphicsLinearLayout(parent = self)
+      self.token_layout = QGraphicsGridLayout()
+      self.token_layout.setSpacing(0.5)
+
       self.name_on_tile = QGraphicsWidget()
       self.info = QGraphicsWidget()
+
       self.layout.setOrientation(Qt.Vertical)
+      self.setContentsMargins(75, 0, 90, 0)
 
       property_name = QGraphicsTextItem(self.name, parent = self.name_on_tile)
 
@@ -312,29 +302,50 @@ class Tile(QGraphicsWidget):
             tile = list(mp_console.SPECIAL_CASES[self.real_pos].keys())[0]
 
             if tile == "Start":
-               money_start = QGraphicsTextItem("200", parent = self.info)
+               money_start = QGraphicsTextItem("Free monay: 200", parent = self.info)
+
+               if (len(players) == 6 or len(players) == 5 or len(players) == 4):
+                  sub_layout = True
+                  sub_pos = 0
+               else:
+                  sub_layout = False
+
+               for i, player in enumerate(players):
+                  self.tokens.append(player)
+                  token_widget = Token(player)
+
+                  if ((len(players) == 4 and i >= 2) or 
+                      (len(players) >= 5 and i >= 3)):
+                     if sub_layout:
+                        self.token_layout.addItem(token_widget, 1, sub_pos)
+                        sub_pos += 1
+                  else:
+                     self.token_layout.addItem(token_widget, 0, i)
+
             elif tile in ["Income Tax", "Super Tax"]:
                money = mp_console.SPECIAL_CASES[self.real_pos][tile]
-               money_tax = QGraphicsTextItem(f"-{money}", parent = self.info)
+               money_tax = QGraphicsTextItem(f"Tax: -{money}", parent = self.info)
 
       self.layout.addItem(self.name_on_tile)
-      self.layout.setAlignment(self.name_on_tile, Qt.AlignHCenter)
       self.layout.addItem(self.info)
-      self.layout.setAlignment(self.info, Qt.AlignCenter)
-      self.layout.addStretch()
+      self.layout.addItem(self.token_layout)
       self.setLayout(self.layout)
+
+      self.layout.setAlignment(self.layout, Qt.AlignCenter)
+
 
    def paint(self, painter, option, widget):
       painter.drawRects(self.boundingRect())
-      painter.drawRects(self.name_on_tile.boundingRect())
 
    def has_tokens(self):
       return self.tokens
 
 
 class Token(QGraphicsWidget):
-   def __init__(self):
+   def __init__(self, player):
       super().__init__()
+      self.player = player
+      self.token = QGraphicsEllipseItem(0, 0, 20, 20, parent = self)
 
 
 if __name__ == "__main__":
