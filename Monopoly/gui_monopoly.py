@@ -13,45 +13,16 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QErrorMessage,
     QGraphicsScene,
-    QGraphicsItem,
     QGraphicsView,
     QGraphicsGridLayout,
     QGraphicsWidget,
     QGraphicsLinearLayout,
     QGraphicsTextItem,
-    QGraphicsRectItem,
     QGraphicsEllipseItem,
-    QGraphicsLayoutItem,
 )
 from PyQt5.QtCore import Qt
 from PyQt5 import QtGui
-import monopoly_console as mp_console
-
-
-# self.board_positions = [
-#    20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-#    19, "", "", "", "", "", "", "", "", "", 31,
-#    18, "", "", "", "", "", "", "", "", "", 32,
-#    17, "", "", "", "", "", "", "", "", "", 33,
-#    16, "", "", "", "", "", "", "", "", "", 34,
-#    15, "", "", "", "", "", "", "", "", "", 35,
-#    14, "", "", "", "", "", "", "", "", "", 36,
-#    13, "", "", "", "", "", "", "", "", "", 37,
-#    12, "", "", "", "", "", "", "", "", "", 38,
-#    11, "", "", "", "", "", "", "", "", "", 39,
-#    10,  9,  8,  7,  6,  5,  4,  3,  2,  1,  0
-# ]
-
-# self.properties = [
-#    "Start", "Old Kent Road", "Community Chest", "Whitechapel Road", "Income Tax",
-#    "King's Cross station", "The Angel Islington", "Chance", "Euston Road", "Pentonville Road", "Visit Jail",
-#    "Pall Mall", "Electric Company", "Whitehall", "Northumberland Avenue", "Marylebine station",
-#    "Bow Street", "Community Chest", "Marlborough Street", "Vine Street", "Free Parking",
-#    "Strand", "Fleet Street", "Chance", "Trafalgar Square", "Fenchurch Street station",
-#    "Leicester Square", "Coventry Street", "Water Works", "Piccadilly", "Go to Jail",
-#    "Regent Street", "Oxford Street", "Community Chest", "Bond Street", "Liverpool Street station",
-#    "Chance", "Park Lane", "Super Tax", "Mayfair"
-# ]
+import monopoly_core as mp_core
 
 
 class MainWindow(QMainWindow):
@@ -94,7 +65,7 @@ class MainWindow(QMainWindow):
 
     def create_players(self):
         """ check the names fields, open the game screen """
-        
+
         players = []
 
         for player in self.names_screen.player_names:
@@ -106,7 +77,7 @@ class MainWindow(QMainWindow):
                 error.exec_()
                 return
 
-            players.append(mp_console.Player(name))
+            players.append(mp_core.Player(name))
 
         self.game = Monopoly(players)
         self.central_widget.addWidget(self.game)
@@ -183,33 +154,40 @@ class Monopoly(QWidget):
         self.player_info_layout = QGridLayout()
         self.buttons_layout = QHBoxLayout()
 
+        self.message_box = QMessageBox()
+
         if len(players) > 1:
-            ordered_players = self.order_players()
+            self.ordered_players = self.order_players()
         else:
-            ordered_players = players
+            self.ordered_players = self.players
 
-        turn_label = QLabel(f"Turn of {ordered_players[0]}")
-        turn_label.setFont(QtGui.QFont("Comic Sans MS", 20, QtGui.QFont.Bold))
+        self.player_generator()
 
-        view = QGraphicsView()
-        scene = QGraphicsScene()
+        self.turn_label = QLabel()
+
+        self.view = QGraphicsView()
+        self.scene = QGraphicsScene()
         self.board = Board(self.players)
-        scene.addItem(self.board)
-        view.setScene(scene)
+        self.board.setParent(self)
+        self.scene.addItem(self.board)
+        self.view.setScene(self.scene)
 
-        balance_info = QLabel("Money left:")
-        balance = QLabel(f"{ordered_players[0].get_balance()}")
-        possessions_info = QLabel("You have these properties:")
-        possessions = QLabel(f"{ordered_players[0].get_possessions()}")
+        self.balance_info = QLabel()
+        self.balance = QLabel()
+        self.possessions_info = QLabel()
+        self.possessions = QLabel()
+
+        self.get_next_player_data()
+
         roll_button = QPushButton("Roll")
 
-        self.turn_layout.addWidget(turn_label)
+        self.turn_layout.addWidget(self.turn_label)
         self.turn_layout.setAlignment(Qt.AlignCenter)
-        self.board_layout.addWidget(view)
-        self.player_info_layout.addWidget(balance_info, 1, 0, Qt.AlignCenter)
-        self.player_info_layout.addWidget(balance, 2, 0, Qt.AlignCenter)
-        self.player_info_layout.addWidget(possessions_info, 1, 2, Qt.AlignCenter)
-        self.player_info_layout.addWidget(possessions, 2, 2, Qt.AlignCenter)
+        self.board_layout.addWidget(self.view)
+        self.player_info_layout.addWidget(self.balance_info, 1, 0, Qt.AlignCenter)
+        self.player_info_layout.addWidget(self.balance, 2, 0, Qt.AlignCenter)
+        self.player_info_layout.addWidget(self.possessions_info, 1, 2, Qt.AlignCenter)
+        self.player_info_layout.addWidget(self.possessions, 2, 2, Qt.AlignCenter)
         self.buttons_layout.addWidget(roll_button)
 
         self.main_layout.addLayout(self.turn_layout)
@@ -219,34 +197,111 @@ class Monopoly(QWidget):
 
         self.setLayout(self.main_layout)
 
+        roll_button.clicked.connect(self.roll)
+
+    def player_generator(self):
+        """ Generator for player turns """
+
+        self.gen = (player for player in self.ordered_players)
+
+    def set_current_player(self):
+        try:
+            self.current_player = next(self.gen)
+        except StopIteration:
+            self.player_generator()
+            self.current_player = next(self.gen)
+
+    def get_current_player(self):
+        return self.current_player
+
+    def get_next_player_data(self):
+        """ Update the info of the "new" current player """
+
+        self.set_current_player()
+
+        self.turn_label.setText(f"Turn of {self.current_player}")
+        self.turn_label.setFont(QtGui.QFont("Comic Sans MS", 20, QtGui.QFont.Bold))
+        self.balance_info.setText("Money left:")
+        self.balance.setText(f"{self.current_player.get_balance()}")
+        self.possessions_info.setText("You have these properties:")
+        self.possessions.setText(f"{self.current_player.get_possessions()}")
+
     def order_players(self):
         """ roll dices for players to order them """
 
         rolls = []
 
         for player in self.players:
-            rolls.append(sum(mp_console.roll()))
+            rolls.append(sum(mp_core.roll()))
 
         rolls_players = sorted(set(zip(rolls, self.players)), key=lambda x: -x[0])
         ordered_players = [player[1] for player in rolls_players]
 
-        message_box = QMessageBox()
         message = "Order of players:\n"
 
         for roll, player in rolls_players:
             message += f"- {player} rolled {roll}\n"
 
-        message_box.setText(message)
-        message_box.exec_()
+        self.message_box.setText(message)
+        self.message_box.exec_()
 
         return ordered_players
 
+    def roll(self):
+        """ roll and get new position """
+
+        doubles = 0
+        die1, die2 = mp_core.roll()
+        sum_dice = sum((die1, die2))
+
+        self.message_box.setText(
+            f"{self.current_player} rolled {die1} and {die2}: {sum_dice}"
+        )
+        self.message_box.exec_()
+
+        self.move_player(sum_dice)
+
+        if die1 == die2:
+            doubles += 1
+        else:
+            self.get_next_player_data()
+            doubles = 0
+
+    def move_player(self, sum_dice):
+        
+        # get the new tile according to the position of current player
+        current_tile = self.board.get_tile_current_player()
+        tile_pos = self.board.get_tile_pos(current_tile)
+        new_real_pos = tile_pos + sum_dice
+
+        if new_real_pos >= 40:
+            new_real_pos -= 40
+
+        new_fake_pos = list(self.board.board_positions.keys())[list(self.board.board_positions.values()).index(new_real_pos)]
+        new_tile_name = self.board.properties[new_fake_pos]
+        new_tile = self.board.get_tile(new_tile_name)
+
+        # add/remove token from new/current tile
+        current_player_token = current_tile.get_token(self.current_player)
+        current_tile.remove_token(current_player_token)
+        new_tile.add_token(current_player_token)
+
+        # remove token from layout
+        current_tile.remove_token_layout(current_player_token)
+
+        # add token in layout
+        new_tile.display_game_pieces()
+
+        # change token's tile
+        current_player_token.set_tile(new_tile)
 
 class Board(QGraphicsWidget):
     def __init__(self, players):
         super().__init__()
+        self.total_tokens = []
 
-        nb_players = len(players)
+        for player in players:
+            self.total_tokens.append(Token(player))
 
         self.board_layout = QGraphicsGridLayout()
         self.board_layout.setSpacing(0)
@@ -288,9 +343,32 @@ class Board(QGraphicsWidget):
 
         self.setLayout(self.board_layout)
 
-    def get_tile(self):
+    def get_tile_current_player(self):
         for i in range(0, 40):
-            prop = self.board_layout.itemAt(i)
+            tile = self.board_layout.itemAt(i)
+            tokens = tile.has_tokens()
+
+            if tokens:
+                for token in tokens:
+                    player_name = token.get_player().get_name()
+                    current_player_name = self.parent().current_player.get_name()
+
+                    if player_name == current_player_name:
+                        return tile
+
+    def get_tile_pos(self, tile):
+        tile_name = tile.get_tile_name()
+        tile_pos = self.properties.index(tile_name)
+        real_pos = self.board_positions[tile_pos]
+        return real_pos
+
+    def get_tile(self, tile_name):
+        for i in range(0, 40):
+            tile = self.board_layout.itemAt(i)
+            
+            if tile_name == tile.get_tile_name():
+                return tile
+
 
 
 class Tile(QGraphicsWidget):
@@ -310,42 +388,30 @@ class Tile(QGraphicsWidget):
         self.setContentsMargins(75, 0, 90, 0)
 
         property_name = QGraphicsTextItem(self.name, parent=self.name_on_tile)
-
+        
         if name in parent.properties:
             self.real_pos = parent.board_positions[parent.properties.index(name)]
 
-            if self.real_pos in mp_console.PROPERTIES:
-                self.price = mp_console.PROPERTIES[self.real_pos][name]["Price"]
-                self.rent = mp_console.PROPERTIES[self.real_pos][name]["Rent"]
+            if self.real_pos in mp_core.PROPERTIES:
+                self.price = mp_core.PROPERTIES[self.real_pos][name]["Price"]
+                self.rent = mp_core.PROPERTIES[self.real_pos][name]["Rent"]
                 money_info = QGraphicsTextItem(f"Price: {self.price}", parent=self.info)
 
-            elif self.real_pos in mp_console.SPECIAL_CASES:
-                tile = list(mp_console.SPECIAL_CASES[self.real_pos].keys())[0]
+            elif self.real_pos in mp_core.SPECIAL_CASES:
+                tile = list(mp_core.SPECIAL_CASES[self.real_pos].keys())[0]
 
                 if tile == "Start":
                     money_start = QGraphicsTextItem("Free monay: 200", parent=self.info)
 
-                    if len(players) == 6 or len(players) == 5 or len(players) == 4:
-                        sub_layout = True
-                        sub_pos = 0
-                    else:
-                        sub_layout = False
+                    for player in players:
+                        proxy_token = Token(player)
+                        proxy_token.set_tile(tile)
+                        self.tokens.append(proxy_token)
 
-                    for i, player in enumerate(players):
-                        self.tokens.append(player)
-                        token_widget = Token(player)
-
-                        if (len(players) == 4 and i >= 2) or (
-                            len(players) >= 5 and i >= 3
-                        ):
-                            if sub_layout:
-                                self.token_layout.addItem(token_widget, 1, sub_pos)
-                                sub_pos += 1
-                        else:
-                            self.token_layout.addItem(token_widget, 0, i)
+                    self.display_game_pieces()
 
                 elif tile in ["Income Tax", "Super Tax"]:
-                    money = mp_console.SPECIAL_CASES[self.real_pos][tile]
+                    money = mp_core.SPECIAL_CASES[self.real_pos][tile]
                     money_tax = QGraphicsTextItem(f"Tax: -{money}", parent=self.info)
 
         self.layout.addItem(self.name_on_tile)
@@ -355,12 +421,52 @@ class Tile(QGraphicsWidget):
 
         self.layout.setAlignment(self.layout, Qt.AlignCenter)
 
+    def add_token(self, token):
+        self.tokens.append(token)
+
+    def remove_token(self, token):
+        self.tokens.remove(token)
+
+    def get_tile_name(self):
+        return self.name
+
+    def display_game_pieces(self):
+        if len(self.tokens) == 6 or len(self.tokens) == 5 or len(self.tokens) == 4:
+            sub_layout = True
+            sub_pos = 0
+        else:
+            sub_layout = False
+
+        for i, token in enumerate(self.tokens):
+            if (len(self.tokens) == 4 and i >= 2) or (
+                len(self.tokens) >= 5 and i >= 3
+            ):
+                if sub_layout:
+                    self.token_layout.addItem(token, 1, sub_pos)
+                    sub_pos += 1
+            else:
+                self.token_layout.addItem(token, 0, i)
+
+        return self.token_layout
+
     def paint(self, painter, option, widget):
         painter.drawRects(self.boundingRect())
 
     def has_tokens(self):
-        return self.tokens
+        if self.tokens != []:
+            return self.tokens
+        else:
+            return
 
+    def get_token(self, player):
+        for token in self.tokens:
+            if player == token.get_player():
+                return token
+
+        return
+
+    def remove_token_layout(self, token):
+        self.token_layout.removeItem(token)
 
 class Token(QGraphicsWidget):
     def __init__(self, player):
@@ -368,27 +474,14 @@ class Token(QGraphicsWidget):
         self.player = player
         self.token = QGraphicsEllipseItem(0, 0, 20, 20, parent=self)
 
+    def get_current_tile(self):
+        return self.current_tile
 
-def display_game_pieces(tokens):
-    if len(players) == 6 or len(players) == 5 or len(players) == 4:
-        sub_layout = True
-        sub_pos = 0
-    else:
-        sub_layout = False
+    def set_tile(self, new_tile):
+        self.current_tile = new_tile
 
-    for i, player in enumerate(players):
-        tokens.append(player)
-        token_widget = Token(player)
-
-        if (len(players) == 4 and i >= 2) or (
-            len(players) >= 5 and i >= 3
-        ):
-            if sub_layout:
-                token_layout.addItem(token_widget, 1, sub_pos)
-                sub_pos += 1
-        else:
-            token_layout.addItem(token_widget, 0, i)
-
+    def get_player(self):
+        return self.player
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
