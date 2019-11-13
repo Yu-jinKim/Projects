@@ -80,12 +80,8 @@ class Player:
 
             if self.position == 0:
                 self.balance += 400
-                print("You landed on the Go tile, lucky: "
-                      f"{self.balance - 400} --> {self.balance}")
             else:
                 self.balance += 200
-                print("You passed through the Go tile "
-                      f"{self.balance - 200} --> {self.balance}")
 
         return self.position
 
@@ -98,14 +94,10 @@ class Player:
     def add_possession(self, land, amount):
         self.balance -= amount
         self.possessions.append(land)
-        print(f"You paid {amount} for {land}")
-        print(f"you now have these properties: {self.get_possessions()}")
 
     def remove_possession(self, land, amount):
         self.balance += amount
         self.possessions.remove(land)
-        print(f"You removed {land} for {amount}")
-        print(f"you now have these properties: {self.possessions}")
 
     def pay(self, amount):
         self.balance -= amount
