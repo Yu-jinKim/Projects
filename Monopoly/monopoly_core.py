@@ -125,8 +125,8 @@ def roll():
     """ roll 2 dice """
     die1 = randint(1, 6)
     die2 = randint(1, 6)
-    # print(f"You rolled {die1} and {die2}")
-    return (die1, die2)
+    sum_dice = sum((die1, die2))
+    return die1, die2, sum_dice
 
 
 def main():
