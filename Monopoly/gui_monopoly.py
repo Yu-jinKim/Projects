@@ -5,6 +5,7 @@ GUI done in PyQt5 using monopoly_core.py
 
 
 import sys
+import time
 from PyQt5.QtWidgets import (
     QLineEdit,
     QWidget,
@@ -161,6 +162,7 @@ class Monopoly(QWidget):
         self.buttons_layout = QHBoxLayout()
 
         self.message_box = QMessageBox()
+        self.ask = QMessageBox()
 
         if len(players) > 1:
             self.ordered_players = self.order_players()
@@ -172,6 +174,8 @@ class Monopoly(QWidget):
         self.turn_label = QLabel()
         self.balance_info = QLabel()
         self.balance = QLabel()
+        self.position_info = QLabel()
+        self.position = QLabel()
         self.possessions_info = QLabel()
         self.possessions = QLabel()
         roll_button = QPushButton("Roll")
@@ -183,13 +187,16 @@ class Monopoly(QWidget):
         self.scene.addItem(self.board)
         self.view.setScene(self.scene)
 
-        self.get_next_player_data()
+        self.pass_player_turn()
+        self.update_interface()
 
         self.turn_layout.addWidget(self.turn_label)
         self.turn_layout.setAlignment(Qt.AlignCenter)
         self.board_layout.addWidget(self.view)
         self.player_info_layout.addWidget(self.balance_info, 1, 0, Qt.AlignCenter)
         self.player_info_layout.addWidget(self.balance, 2, 0, Qt.AlignCenter)
+        self.player_info_layout.addWidget(self.position_info, 1, 1, Qt.AlignCenter)
+        self.player_info_layout.addWidget(self.position, 2, 1, Qt.AlignCenter)
         self.player_info_layout.addWidget(self.possessions_info, 1, 2, Qt.AlignCenter)
         self.player_info_layout.addWidget(self.possessions, 2, 2, Qt.AlignCenter)
         self.buttons_layout.addWidget(roll_button)
@@ -201,14 +208,14 @@ class Monopoly(QWidget):
 
         self.setLayout(self.main_layout)
 
-        roll_button.clicked.connect(self.roll)
+        roll_button.clicked.connect(self.play_turn)
 
     def player_generator(self):
         """ Generator for player turns """
 
         self.gen = (player for player in self.ordered_players)
 
-    def set_current_player(self):
+    def pass_player_turn(self):
         try:
             self.current_player = next(self.gen)
         except StopIteration:
@@ -218,17 +225,29 @@ class Monopoly(QWidget):
     def get_current_player(self):
         return self.current_player
 
-    def get_next_player_data(self):
-        """ Update the info of the "new" current player """
-
-        self.set_current_player()
-
+    def update_turn(self):
         self.turn_label.setText(f"Turn of {self.current_player}")
         self.turn_label.setFont(QtGui.QFont("Comic Sans MS", 20, QtGui.QFont.Bold))
+
+    def update_balance(self):
         self.balance_info.setText("Money left:")
         self.balance.setText(f"{self.current_player.get_balance()}")
+
+    def update_position(self):
+        tile = self.board.get_tile_current_player(self.current_player)
+
+        self.position_info.setText("Current position:")
+        self.position.setText(f"{tile.get_name()}")
+
+    def update_possessions(self):
         self.possessions_info.setText("You have these properties:")
         self.possessions.setText(f"{self.current_player.get_possessions()}")
+
+    def update_interface(self):
+        self.update_turn()
+        self.update_balance()
+        self.update_position()
+        self.update_possessions()
 
     def order_players(self):
         """ roll dices for players to order them """
@@ -236,7 +255,7 @@ class Monopoly(QWidget):
         rolls = []
 
         for player in self.players:
-            rolls.append(sum(mp_core.roll()))
+            rolls.append(sum(mp_core.roll()[0:2]))
 
         rolls_players = sorted(set(zip(rolls, self.players)), key=lambda x: -x[0])
         ordered_players = [player[1] for player in rolls_players]
@@ -251,25 +270,40 @@ class Monopoly(QWidget):
 
         return ordered_players
 
-    def roll(self):
-        """ roll and get new position """
-
-        doubles = 0
-        die1, die2 = mp_core.roll()
-        sum_dice = sum((die1, die2))
-
-        self.message_box.setText(
-            f"{self.current_player} rolled {die1} and {die2}: {sum_dice}"
-        )
+    def popup(self, message):
+        self.message_box.setText(message)
         self.message_box.exec_()
 
-        self.move_player(sum_dice)
+    def play_turn(self, doubles = 0):
+        """ Play the turn 
+        
+        Roll dice
+        Move player
+        Interact with the board
+        Check bankrupcy
+        """
+
+        die1, die2, sum_dice = self.roll()
+
+        current_tile = self.move_player(sum_dice)
+        self.interact_board(current_tile)
 
         if die1 == die2:
             doubles += 1
+            self.play_turn(doubles)
+            self.update_interface()
         else:
-            self.get_next_player_data()
-            doubles = 0
+            self.pass_player_turn()
+            self.update_interface()
+
+    def roll(self):
+        """ roll and get new position """
+
+        die1, die2, sum_dice = mp_core.roll()
+
+        self.popup(f"{self.current_player} rolled {die1} and {die2}: {sum_dice}")
+
+        return die1, die2, sum_dice
 
     def move_player(self, sum_dice):
         """ Move player on the board
@@ -309,6 +343,39 @@ class Monopoly(QWidget):
 
         # change token's tile
         current_player_token.set_tile(new_tile)
+
+        time.sleep(0.5)
+
+        self.popup(f"You landed on {new_tile.get_name()}")
+
+        return new_tile
+
+    def interact_board(self, tile):
+        tile_name = tile.get_name()
+        tile_pos = tile.get_pos()
+        tile_real_pos = self.board.board_positions[tile_pos]
+
+        if tile_name in mp_core.PROPERTIES[tile_real_pos]:
+            if tile.is_owned():
+                owner = tile.get_owner()
+                rent = mp_core.PROPERTIES[tile_real_pos][tile_name]["Rent"]
+                self.current_player.pay(rent)
+                owner.receive(rent)
+            else:
+                price = mp_core.PROPERTIES[tile_real_pos][tile_name]["Price"]
+                player_balance = self.current_player.get_balance()
+
+                if player_balance < price:
+                    self.message_box.setText("You don't have enough money to buy")
+                    self.message_box.exec_()
+                else:    
+                    buy = self.ask.question(self, "", f"Buy {tile_name} for {price}?", self.ask.Yes | self.ask.No)
+                    self.ask.exec_()
+                    
+                    if buy == self.ask.Yes:
+                        self.current_player.add_possession(tile_name, price)
+                        tile.set_owner(self.current_player)
+                    
 
 
 class Board(QGraphicsWidget):
@@ -390,6 +457,7 @@ class Tile(QGraphicsWidget):
         self.name = name
         self.position = position
         self.tokens = []
+        self.owner = False
 
         self.layout = QGraphicsLinearLayout()
         self.token_layout = QGraphicsGridLayout()
@@ -434,6 +502,18 @@ class Tile(QGraphicsWidget):
         self.setLayout(self.layout)
 
         self.layout.setAlignment(self.layout, Qt.AlignCenter)
+
+    def is_owned(self):
+        if self.owner:
+            return True
+        else:
+            return False
+
+    def set_owner(self, player):
+        self.owner = player
+
+    def get_owner(self):
+        return self.owner
 
     def add_token(self, token):
         self.tokens.append(token)
