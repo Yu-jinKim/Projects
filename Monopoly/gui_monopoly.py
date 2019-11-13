@@ -1,3 +1,9 @@
+""" Monopoly game
+
+GUI done in PyQt5 using monopoly_core.py
+"""
+
+
 import sys
 from PyQt5.QtWidgets import (
     QLineEdit,
@@ -164,6 +170,11 @@ class Monopoly(QWidget):
         self.player_generator()
 
         self.turn_label = QLabel()
+        self.balance_info = QLabel()
+        self.balance = QLabel()
+        self.possessions_info = QLabel()
+        self.possessions = QLabel()
+        roll_button = QPushButton("Roll")
 
         self.view = QGraphicsView()
         self.scene = QGraphicsScene()
@@ -172,14 +183,7 @@ class Monopoly(QWidget):
         self.scene.addItem(self.board)
         self.view.setScene(self.scene)
 
-        self.balance_info = QLabel()
-        self.balance = QLabel()
-        self.possessions_info = QLabel()
-        self.possessions = QLabel()
-
         self.get_next_player_data()
-
-        roll_button = QPushButton("Roll")
 
         self.turn_layout.addWidget(self.turn_label)
         self.turn_layout.setAlignment(Qt.AlignCenter)
@@ -268,18 +272,29 @@ class Monopoly(QWidget):
             doubles = 0
 
     def move_player(self, sum_dice):
+        """ Move player on the board
+
+        Get new position --> new tile
+        Remove player from old tile
+        Add player to new tile
+        """
         
         # get the new tile according to the position of current player
-        current_tile = self.board.get_tile_current_player()
-        tile_pos = self.board.get_tile_pos(current_tile)
-        new_real_pos = tile_pos + sum_dice
+        current_tile = self.board.get_tile_current_player(self.current_player)
+        current_real_pos = self.board.board_positions[current_tile.get_pos()]
+        new_real_pos = current_real_pos + sum_dice
 
+        # if player gets passed last position of the board
+        # "reset" the number to loop through the board
         if new_real_pos >= 40:
             new_real_pos -= 40
 
-        new_fake_pos = list(self.board.board_positions.keys())[list(self.board.board_positions.values()).index(new_real_pos)]
-        new_tile_name = self.board.properties[new_fake_pos]
-        new_tile = self.board.get_tile(new_tile_name)
+        # use the real position to get the fake position
+        new_fake_pos = list(
+            self.board.board_positions.keys()
+        )[list(self.board.board_positions.values()).index(new_real_pos)]
+        # use the fake position to get the new tile
+        new_tile = self.board.get_tile(tile_pos = new_fake_pos)
 
         # add/remove token from new/current tile
         current_player_token = current_tile.get_token(self.current_player)
@@ -294,6 +309,7 @@ class Monopoly(QWidget):
 
         # change token's tile
         current_player_token.set_tile(new_tile)
+
 
 class Board(QGraphicsWidget):
     def __init__(self, players):
@@ -338,46 +354,44 @@ class Board(QGraphicsWidget):
         for position, name in zip(positions, self.properties):
             if name == "":
                 continue
-
-            self.board_layout.addItem(Tile(name, players, parent=self), *position)
+            
+            self.board_layout.addItem(Tile(name, grid2pos(position), players, parent=self), *position)
 
         self.setLayout(self.board_layout)
 
-    def get_tile_current_player(self):
+    def get_tile_current_player(self, current_player):
         for i in range(0, 40):
             tile = self.board_layout.itemAt(i)
             tokens = tile.has_tokens()
 
             if tokens:
                 for token in tokens:
-                    player_name = token.get_player().get_name()
-                    current_player_name = self.parent().current_player.get_name()
+                    player = token.get_player()
 
-                    if player_name == current_player_name:
+                    if player == current_player:
                         return tile
 
-    def get_tile_pos(self, tile):
-        tile_name = tile.get_tile_name()
-        tile_pos = self.properties.index(tile_name)
-        real_pos = self.board_positions[tile_pos]
-        return real_pos
-
-    def get_tile(self, tile_name):
+    def get_tile(self, tile_name = None, tile_pos = None):
+        """ Get tile object from name or pos """
+        
         for i in range(0, 40):
             tile = self.board_layout.itemAt(i)
             
-            if tile_name == tile.get_tile_name():
+            if tile_name == tile.get_name():
+                return tile
+
+            if tile_pos == tile.get_pos():
                 return tile
 
 
-
 class Tile(QGraphicsWidget):
-    def __init__(self, name, players, parent):
+    def __init__(self, name, position, players, parent):
         super().__init__(parent=parent)
         self.name = name
+        self.position = position
         self.tokens = []
 
-        self.layout = QGraphicsLinearLayout(parent=self)
+        self.layout = QGraphicsLinearLayout()
         self.token_layout = QGraphicsGridLayout()
         self.token_layout.setSpacing(0.5)
 
@@ -404,9 +418,9 @@ class Tile(QGraphicsWidget):
                     money_start = QGraphicsTextItem("Free monay: 200", parent=self.info)
 
                     for player in players:
-                        proxy_token = Token(player)
-                        proxy_token.set_tile(tile)
-                        self.tokens.append(proxy_token)
+                        token = Token(player)
+                        token.set_tile(tile)
+                        self.tokens.append(token)
 
                     self.display_game_pieces()
 
@@ -427,8 +441,11 @@ class Tile(QGraphicsWidget):
     def remove_token(self, token):
         self.tokens.remove(token)
 
-    def get_tile_name(self):
+    def get_name(self):
         return self.name
+
+    def get_pos(self):
+        return self.position
 
     def display_game_pieces(self):
         if len(self.tokens) == 6 or len(self.tokens) == 5 or len(self.tokens) == 4:
@@ -468,6 +485,7 @@ class Tile(QGraphicsWidget):
     def remove_token_layout(self, token):
         self.token_layout.removeItem(token)
 
+
 class Token(QGraphicsWidget):
     def __init__(self, player):
         super().__init__()
@@ -482,6 +500,13 @@ class Token(QGraphicsWidget):
 
     def get_player(self):
         return self.player
+
+
+def grid2pos(values: list):
+    row, column = values
+    pos = (row * 10) + row + column
+    return pos
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
